@@ -41,8 +41,8 @@ class TrafficLightManager(
         const val STATUS_RED = 2
         const val STATUS_YELLOW = 3
 
-        // 方向映射（高德方向 -> 我们自定义方向）
-        const val DIRECTION_STRAIGHT = 0   // 直行（对应高德4）
+        // 方向映射（保持与Java版本一致，直接使用高德原始值）
+        const val DIRECTION_STRAIGHT = 4   // 直行（对应高德4，直接使用4）
         const val DIRECTION_LEFT = 1       // 左转（对应高德1）
         const val DIRECTION_RIGHT = 2      // 右转（对应高德2）
 
@@ -53,7 +53,7 @@ class TrafficLightManager(
         private const val AMAP_STATUS_GREEN_COUNTDOWN = 4  // 绿灯倒计时
         private const val AMAP_STATUS_TRANSITION = -1      // 过渡状态（显示黄灯）
 
-        // 高德原始方向值
+        // 高德原始方向值（保持不变）
         private const val AMAP_DIRECTION_LEFT = 1    // 左转
         private const val AMAP_DIRECTION_RIGHT = 2   // 右转
         private const val AMAP_DIRECTION_STRAIGHT = 4 // 直行
@@ -65,7 +65,7 @@ class TrafficLightManager(
     data class TrafficLightInfo(
         var status: Int = STATUS_NONE,           // 红绿灯状态（映射后的状态）
         var countdown: Int = 0,                  // 倒计时秒数（主要使用redLightCountDownSeconds）
-        var direction: Int = DIRECTION_STRAIGHT, // 方向（映射后的方向）
+        var direction: Int = DIRECTION_STRAIGHT, // 方向（直接使用高德原始值：1=左转，2=右转，4=直行）
         var waitRound: Int = 0,                  // 等待轮次
         var source: String = "amap",             // 数据来源
         var timestamp: Long = System.currentTimeMillis(), // 接收时间戳
@@ -91,7 +91,7 @@ class TrafficLightManager(
     private val handler = Handler(Looper.getMainLooper())
 
     // 历史方向缓存（应对dir=0的情况）
-    private var lastValidDirection = 0
+    private var lastValidDirection = DIRECTION_STRAIGHT  // 默认为直行
 
     // 最后接收到的有效数据时间戳
     private var lastValidDataTime: Long = 0
@@ -114,7 +114,7 @@ class TrafficLightManager(
                     handler.post {
                         updateCallback(null)
                         // 重置历史方向
-                        lastValidDirection = 0
+                        lastValidDirection = DIRECTION_STRAIGHT
                     }
                 }
 
@@ -238,32 +238,33 @@ class TrafficLightManager(
     }
 
     /**
-     * 处理方向逻辑（按照之前分析）
+     * 处理方向逻辑（按照Java版本保持一致）
      * 高德方向：1=左转, 2=右转, 4=直行
      * 特殊处理：dir=0时使用历史方向
      */
     private fun handleDirection(amapDirection: Int): Int {
-        var direction = DIRECTION_STRAIGHT
+        var direction = DIRECTION_STRAIGHT  // 默认直行
 
         // 如果收到有效方向，更新历史方向
         when (amapDirection) {
             AMAP_DIRECTION_LEFT -> {
                 direction = DIRECTION_LEFT
-                lastValidDirection = direction
+                lastValidDirection = direction  // 只在有效时更新历史
             }
             AMAP_DIRECTION_RIGHT -> {
                 direction = DIRECTION_RIGHT
-                lastValidDirection = direction
+                lastValidDirection = direction  // 只在有效时更新历史
             }
             AMAP_DIRECTION_STRAIGHT -> {
                 direction = DIRECTION_STRAIGHT
-                lastValidDirection = direction
+                lastValidDirection = direction  // 只在有效时更新历史
             }
             0 -> {
                 // dir=0时，使用历史方向（如果有）
                 if (lastValidDirection != 0) {
                     direction = lastValidDirection
                 }
+                // 注意：dir=0时不更新历史方向
             }
         }
 
@@ -384,7 +385,7 @@ class TrafficLightManager(
             handler.removeCallbacks(heartbeatRunnable)
 
             // 重置历史方向
-            lastValidDirection = 0
+            lastValidDirection = DIRECTION_STRAIGHT
 
             Log.d("TrafficLightManager", "广播接收器已注销")
 
@@ -459,7 +460,7 @@ class TrafficLightManager(
             DIRECTION_STRAIGHT -> "直行"
             DIRECTION_LEFT -> "左转"
             DIRECTION_RIGHT -> "右转"
-            else -> "直行"
+            else -> "未知($direction)"
         }
     }
 
