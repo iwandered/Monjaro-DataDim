@@ -159,13 +159,13 @@ class DataFragment : Fragment() {
         try {
             Log.d("DataFragment", "开始初始化红绿灯管理器")
 
-            // 确保视图已加载 - 修复这里：不使用 ::binding.isInitialized
+            // 确保视图已加载
             if (_binding == null) {
                 Log.e("DataFragment", "Binding未初始化，无法设置红绿灯管理器")
                 return
             }
 
-            // 初始化红绿灯视图
+            // 设置调试模式
             binding.trafficLightView.setDebugMode(BuildConfig.DEBUG)
 
             // 创建红绿灯管理器，传入更新回调

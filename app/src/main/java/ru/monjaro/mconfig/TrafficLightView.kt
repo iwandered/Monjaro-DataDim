@@ -8,7 +8,8 @@ import kotlin.math.min
 
 /**
  * 红绿灯倒计时自定义视图
- * 采用胶囊样式设计，左侧为红绿灯颜色和箭头，右侧为倒计时数字
+ * 紧凑水平布局：左侧为红绿灯颜色，中间为方向箭头，右侧为倒计时数字
+ * 移除了胶囊背景，避免元素重叠
  */
 class TrafficLightView @JvmOverloads constructor(
     context: Context,
@@ -17,20 +18,15 @@ class TrafficLightView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     companion object {
-        // 颜色定义（与显示方法文件相同）
+        // 颜色定义
         private const val COLOR_RED = 0xFFFF4444.toInt()
         private const val COLOR_GREEN = 0xFF44FF44.toInt()
         private const val COLOR_YELLOW = 0xFFFFFF44.toInt()
-        private const val COLOR_FLASHING_YELLOW = 0xFFFFFF88.toInt() // 黄闪颜色稍亮
-        private const val COLOR_BACKGROUND = 0x33444444.toInt()  // 半透明背景
-        private const val COLOR_BACKGROUND_DARK = 0x66222222.toInt() // 暗色背景
-        private const val COLOR_TEXT = 0xFFCCCCCC.toInt()
+        private const val COLOR_FLASHING_YELLOW = 0xFFFFFF88.toInt()
+        private const val COLOR_TEXT = 0xFFFFFFFF.toInt()
         private const val COLOR_TEXT_DARK = 0xFF888888.toInt()
-        private const val COLOR_OUTLINE = 0xFF666666.toInt()
-
-        // 方向箭头颜色
+        private const val COLOR_ARROW = 0xFFFFFFFF.toInt()  // 箭头统一用白色
         private const val COLOR_ARROW_DARK = 0xFF333333.toInt()
-        private const val COLOR_ARROW_LIGHT = 0xFFDDDDDD.toInt()
 
         // 动画相关
         private const val BLINK_INTERVAL = 500L // 闪烁间隔
@@ -55,18 +51,6 @@ class TrafficLightView @JvmOverloads constructor(
     }
 
     // 画笔
-    private val capsulePaint = Paint().apply {
-        isAntiAlias = true
-        style = Paint.Style.FILL
-        color = COLOR_BACKGROUND
-    }
-
-    private val capsuleDarkPaint = Paint().apply {
-        isAntiAlias = true
-        style = Paint.Style.FILL
-        color = COLOR_BACKGROUND_DARK
-    }
-
     private val lightPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
@@ -76,14 +60,7 @@ class TrafficLightView @JvmOverloads constructor(
         isAntiAlias = true
         style = Paint.Style.STROKE
         strokeWidth = 2f
-        color = COLOR_OUTLINE
-    }
-
-    private val outlinePaint = Paint().apply {
-        isAntiAlias = true
-        style = Paint.Style.STROKE
-        strokeWidth = 1f
-        color = COLOR_OUTLINE
+        color = 0xFF666666.toInt()
     }
 
     private val textPaint = Paint().apply {
@@ -94,24 +71,16 @@ class TrafficLightView @JvmOverloads constructor(
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
-    private val textDarkPaint = Paint().apply {
-        isAntiAlias = true
-        style = Paint.Style.FILL
-        color = COLOR_TEXT_DARK
-        textAlign = Paint.Align.CENTER
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    }
-
     private val arrowPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
-        color = COLOR_ARROW_DARK
+        color = COLOR_ARROW
     }
 
-    private val arrowLightPaint = Paint().apply {
+    private val arrowDarkPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
-        color = COLOR_ARROW_LIGHT
+        color = COLOR_ARROW_DARK
     }
 
     // 箭头路径
@@ -123,12 +92,13 @@ class TrafficLightView @JvmOverloads constructor(
     private val allDirectionPath = Path()
 
     // 尺寸
-    private var capsuleRadius = 0f
     private var lightRadius = 0f
     private var textSize = 0f
     private var padding = 0f
     private var lightCenterX = 0f
     private var lightCenterY = 0f
+    private var arrowCenterX = 0f
+    private var arrowCenterY = 0f
     private var textCenterX = 0f
     private var textCenterY = 0f
 
@@ -146,73 +116,88 @@ class TrafficLightView @JvmOverloads constructor(
     private fun initArrowPaths() {
         // 直行箭头（向上箭头）
         straightArrowPath.reset()
-        straightArrowPath.moveTo(0f, -0.5f)    // 上顶点
-        straightArrowPath.lineTo(-0.3f, 0f)    // 左下
-        straightArrowPath.lineTo(-0.1f, 0f)    // 左内
-        straightArrowPath.lineTo(-0.1f, 0.5f)  // 下左
-        straightArrowPath.lineTo(0.1f, 0.5f)   // 下右
-        straightArrowPath.lineTo(0.1f, 0f)     // 右内
-        straightArrowPath.lineTo(0.3f, 0f)     // 右下
+        straightArrowPath.moveTo(0f, -0.6f)    // 上顶点
+        straightArrowPath.lineTo(-0.25f, 0f)   // 左下
+        straightArrowPath.lineTo(-0.15f, 0f)   // 左内
+        straightArrowPath.lineTo(-0.15f, 0.6f) // 下左
+        straightArrowPath.lineTo(0.15f, 0.6f)  // 下右
+        straightArrowPath.lineTo(0.15f, 0f)    // 右内
+        straightArrowPath.lineTo(0.25f, 0f)    // 右下
         straightArrowPath.close()
 
         // 左转箭头
         leftArrowPath.reset()
-        leftArrowPath.moveTo(0.3f, -0.5f)      // 右上
-        leftArrowPath.lineTo(-0.3f, 0f)        // 左中
-        leftArrowPath.lineTo(0.3f, 0.5f)       // 右下
+        leftArrowPath.moveTo(0.4f, -0.4f)      // 右上
+        leftArrowPath.lineTo(-0.4f, 0f)        // 左中
+        leftArrowPath.lineTo(0.4f, 0.4f)       // 右下
         leftArrowPath.close()
 
         // 右转箭头
         rightArrowPath.reset()
-        rightArrowPath.moveTo(-0.3f, -0.5f)    // 左上
-        rightArrowPath.lineTo(0.3f, 0f)        // 右中
-        rightArrowPath.lineTo(-0.3f, 0.5f)     // 左下
+        rightArrowPath.moveTo(-0.4f, -0.4f)    // 左上
+        rightArrowPath.lineTo(0.4f, 0f)        // 右中
+        rightArrowPath.lineTo(-0.4f, 0.4f)     // 左下
         rightArrowPath.close()
 
-        // 直行+左转箭头
+        // 直行+左转箭头（向上箭头+左箭头）
         straightLeftArrowPath.reset()
         // 直行部分
-        straightLeftArrowPath.moveTo(-0.1f, -0.5f)
-        straightLeftArrowPath.lineTo(-0.1f, -0.2f)
-        straightLeftArrowPath.lineTo(-0.3f, -0.2f)
-        straightLeftArrowPath.lineTo(0f, 0.1f)
-        straightLeftArrowPath.lineTo(0.3f, -0.2f)
-        straightLeftArrowPath.lineTo(0.1f, -0.2f)
-        straightLeftArrowPath.lineTo(0.1f, 0.5f)
-        straightLeftArrowPath.lineTo(-0.1f, 0.5f)
+        straightLeftArrowPath.moveTo(0f, -0.6f)
+        straightLeftArrowPath.lineTo(-0.15f, -0.3f)
+        straightLeftArrowPath.lineTo(-0.3f, -0.3f)
+        straightLeftArrowPath.lineTo(0f, 0f)
+        straightLeftArrowPath.lineTo(0.3f, -0.3f)
+        straightLeftArrowPath.lineTo(0.15f, -0.3f)
+        straightLeftArrowPath.lineTo(0.15f, 0.6f)
+        straightLeftArrowPath.lineTo(-0.15f, 0.6f)
+        straightLeftArrowPath.lineTo(-0.15f, -0.3f)
         straightLeftArrowPath.close()
 
-        // 直行+右转箭头
+        // 左转部分（叠加在直行上）
+        straightLeftArrowPath.moveTo(-0.1f, 0.1f)
+        straightLeftArrowPath.lineTo(-0.4f, 0.1f)
+        straightLeftArrowPath.lineTo(0f, 0.4f)
+        straightLeftArrowPath.lineTo(0.4f, 0.1f)
+        straightLeftArrowPath.lineTo(0.1f, 0.1f)
+        straightLeftArrowPath.close()
+
+        // 直行+右转箭头（向上箭头+右箭头）
         straightRightArrowPath.reset()
         // 直行部分
-        straightRightArrowPath.moveTo(-0.1f, -0.5f)
-        straightRightArrowPath.lineTo(-0.1f, -0.2f)
-        straightRightArrowPath.lineTo(-0.3f, -0.2f)
-        straightRightArrowPath.lineTo(-0.3f, 0f)
-        straightRightArrowPath.lineTo(0f, 0.3f)
-        straightRightArrowPath.lineTo(0.3f, 0f)
-        straightRightArrowPath.lineTo(0.3f, -0.2f)
-        straightRightArrowPath.lineTo(0.1f, -0.2f)
-        straightRightArrowPath.lineTo(0.1f, 0.5f)
-        straightRightArrowPath.lineTo(-0.1f, 0.5f)
+        straightRightArrowPath.moveTo(0f, -0.6f)
+        straightRightArrowPath.lineTo(-0.15f, -0.3f)
+        straightRightArrowPath.lineTo(-0.3f, -0.3f)
+        straightRightArrowPath.lineTo(0f, 0f)
+        straightRightArrowPath.lineTo(0.3f, -0.3f)
+        straightRightArrowPath.lineTo(0.15f, -0.3f)
+        straightRightArrowPath.lineTo(0.15f, 0.6f)
+        straightRightArrowPath.lineTo(-0.15f, 0.6f)
+        straightRightArrowPath.lineTo(-0.15f, -0.3f)
+        straightRightArrowPath.close()
+
+        // 右转部分（叠加在直行上）
+        straightRightArrowPath.moveTo(-0.4f, -0.1f)
+        straightRightArrowPath.lineTo(0f, 0.2f)
+        straightRightArrowPath.lineTo(0.4f, -0.1f)
+        straightRightArrowPath.lineTo(0.1f, -0.1f)
         straightRightArrowPath.close()
 
         // 所有方向（十字箭头）
         allDirectionPath.reset()
         // 垂直部分
-        allDirectionPath.moveTo(0f, -0.5f)
-        allDirectionPath.lineTo(-0.1f, -0.4f)
-        allDirectionPath.lineTo(-0.1f, -0.1f)
-        allDirectionPath.lineTo(-0.4f, -0.1f)
-        allDirectionPath.lineTo(-0.4f, 0.1f)
-        allDirectionPath.lineTo(-0.1f, 0.1f)
-        allDirectionPath.lineTo(-0.1f, 0.4f)
-        allDirectionPath.lineTo(0.1f, 0.4f)
-        allDirectionPath.lineTo(0.1f, 0.1f)
-        allDirectionPath.lineTo(0.4f, 0.1f)
-        allDirectionPath.lineTo(0.4f, -0.1f)
-        allDirectionPath.lineTo(0.1f, -0.1f)
-        allDirectionPath.lineTo(0.1f, -0.4f)
+        allDirectionPath.moveTo(0f, -0.6f)
+        allDirectionPath.lineTo(-0.15f, -0.45f)
+        allDirectionPath.lineTo(-0.15f, -0.15f)
+        allDirectionPath.lineTo(-0.45f, -0.15f)
+        allDirectionPath.lineTo(-0.45f, 0.15f)
+        allDirectionPath.lineTo(-0.15f, 0.15f)
+        allDirectionPath.lineTo(-0.15f, 0.45f)
+        allDirectionPath.lineTo(0.15f, 0.45f)
+        allDirectionPath.lineTo(0.15f, 0.15f)
+        allDirectionPath.lineTo(0.45f, 0.15f)
+        allDirectionPath.lineTo(0.45f, -0.15f)
+        allDirectionPath.lineTo(0.15f, -0.15f)
+        allDirectionPath.lineTo(0.15f, -0.45f)
         allDirectionPath.close()
     }
 
@@ -281,28 +266,29 @@ class TrafficLightView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
 
         // 计算尺寸
-        capsuleRadius = h / 2f
         lightRadius = h * 0.3f
-        textSize = h * 0.5f
+        textSize = h * 0.45f
         padding = h * 0.1f
 
-        // 计算中心点
-        lightCenterX = capsuleRadius + padding
+        // 计算各元素中心点（紧凑水平布局）
+        // 灯在左侧
+        lightCenterX = lightRadius + padding
         lightCenterY = h / 2f
 
-        // 根据是否有倒计时调整文本位置
+        // 箭头在中间
+        arrowCenterX = lightCenterX + lightRadius + padding * 2
+        arrowCenterY = h / 2f
+
+        // 文本在右侧（如果有倒计时）
         textCenterX = if (countdown > 0) {
-            // 有倒计时时文本在右侧
-            lightCenterX + lightRadius + padding + (textSize * 0.3f)
+            // 根据文本宽度动态计算
+            textPaint.textSize = textSize
+            val textWidth = textPaint.measureText(countdown.toString())
+            arrowCenterX + lightRadius + padding * 2 + textWidth / 2
         } else {
-            // 无倒计时时文本在中间
-            w / 2f
+            arrowCenterX + lightRadius + padding
         }
         textCenterY = h / 2f + (textSize * 0.35f)
-
-        // 设置文本大小
-        textPaint.textSize = textSize
-        textDarkPaint.textSize = textSize
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -318,17 +304,21 @@ class TrafficLightView @JvmOverloads constructor(
             else -> desiredHeight
         }
 
-        // 测量宽度：根据是否有倒计时动态调整
-        val baseWidth = (height * 1.5f).toInt() // 基础宽度（只有红绿灯）
-        val countdownWidth = (height * 2.2f).toInt() // 包含倒计时的宽度
+        // 测量宽度：动态计算三部分的宽度
+        // 1. 灯区域：灯直径 + 左右padding
+        val lightWidth = lightRadius * 2 + padding * 2
 
-        val desiredWidth = if (countdown > 0) {
-            // 计算倒计时数字宽度
-            val textWidth = textPaint.measureText(countdown.toString())
-            (baseWidth + textWidth + padding * 2).toInt()
-        } else {
-            baseWidth
+        // 2. 箭头区域：固定宽度
+        val arrowWidth = height * 0.6f
+
+        // 3. 文本区域：根据倒计时数字计算
+        var textWidth = 0f
+        if (countdown > 0) {
+            textPaint.textSize = textSize
+            textWidth = textPaint.measureText(countdown.toString()) + padding * 2
         }
+
+        val desiredWidth = (lightWidth + arrowWidth + textWidth).toInt()
 
         val widthMode = MeasureSpec.getMode(widthMeasureSpec)
         val widthSize = MeasureSpec.getSize(widthMeasureSpec)
@@ -347,72 +337,39 @@ class TrafficLightView @JvmOverloads constructor(
 
         if (status == TrafficLightManager.STATUS_NONE) return
 
-        val width = width.toFloat()
-        val height = height.toFloat()
+        // 紧凑水平布局：灯 | 箭头 | 秒数
+        drawCompactHorizontalLayout(canvas)
 
-        // 1. 绘制胶囊背景
-        drawCapsuleBackground(canvas, width, height)
-
-        // 2. 绘制红绿灯圆形
-        drawTrafficLight(canvas, width, height)
-
-        // 3. 绘制方向箭头
-        if (blinkVisible) {
-            drawDirectionArrow(canvas, width, height)
-        }
-
-        // 4. 绘制倒计时数字
-        if (countdown > 0 && blinkVisible) {
-            drawCountdownText(canvas, width, height)
-        }
-
-        // 5. 绘制调试信息（仅在调试模式显示）
+        // 绘制调试信息（仅在调试模式显示）
         if (showDebugInfo && dataSource.isNotEmpty() && blinkVisible) {
-            drawDebugInfo(canvas, width, height)
+            drawDebugInfo(canvas, width.toFloat(), height.toFloat())
         }
     }
 
     /**
-     * 绘制胶囊背景
+     * 绘制紧凑水平布局：灯 | 箭头 | 秒数
      */
-    private fun drawCapsuleBackground(canvas: Canvas, width: Float, height: Float) {
-        val capsulePath = Path()
-        val radius = capsuleRadius
-
-        // 创建胶囊形状路径
-        // 左半圆
-        capsulePath.addArc(0f, 0f, radius * 2, height, 90f, 180f)
-        // 顶部直线
-        capsulePath.lineTo(width - radius, 0f)
-        // 右半圆
-        capsulePath.addArc(width - radius * 2, 0f, width, height, 270f, 180f)
-        // 底部直线
-        capsulePath.lineTo(radius, height)
-        capsulePath.close()
-
-        // 根据状态选择背景颜色
-        val backgroundPaint = when (status) {
-            TrafficLightManager.STATUS_GREEN -> capsuleDarkPaint
-            TrafficLightManager.STATUS_RED -> capsuleDarkPaint
-            TrafficLightManager.STATUS_YELLOW -> capsuleDarkPaint
-            else -> capsulePaint
+    private fun drawCompactHorizontalLayout(canvas: Canvas) {
+        // 1. 绘制灯（左侧）
+        if (blinkVisible || status != TrafficLightManager.STATUS_YELLOW) {
+            drawTrafficLight(canvas)
         }
 
-        // 填充胶囊
-        canvas.drawPath(capsulePath, backgroundPaint)
+        // 2. 绘制箭头（中间）
+        if (blinkVisible) {
+            drawDirectionArrow(canvas)
+        }
 
-        // 绘制边框
-        canvas.drawPath(capsulePath, outlinePaint)
+        // 3. 绘制倒计时数字（右侧）
+        if (countdown > 0 && blinkVisible) {
+            drawCountdownText(canvas)
+        }
     }
 
     /**
      * 绘制红绿灯圆形
      */
-    private fun drawTrafficLight(canvas: Canvas, width: Float, height: Float) {
-        if (!blinkVisible && status == TrafficLightManager.STATUS_YELLOW) {
-            return // 闪烁时跳过绘制
-        }
-
+    private fun drawTrafficLight(canvas: Canvas) {
         // 根据状态设置颜色
         val (lightColor, outlineColor) = when (status) {
             TrafficLightManager.STATUS_GREEN -> Pair(COLOR_GREEN, COLOR_GREEN)
@@ -427,49 +384,63 @@ class TrafficLightView @JvmOverloads constructor(
 
         // 绘制红绿灯圆形
         canvas.drawCircle(lightCenterX, lightCenterY, lightRadius, lightPaint)
-
-        // 绘制边框
         canvas.drawCircle(lightCenterX, lightCenterY, lightRadius, lightOutlinePaint)
 
         // 绘制内圆（高光效果）
         val highlightPaint = Paint(lightPaint).apply {
             color = adjustColorBrightness(lightColor, 1.3f)
         }
-        canvas.drawCircle(lightCenterX - lightRadius * 0.2f,
-            lightCenterY - lightRadius * 0.2f,
-            lightRadius * 0.3f,
-            highlightPaint)
+        canvas.drawCircle(
+            lightCenterX - lightRadius * 0.15f,
+            lightCenterY - lightRadius * 0.15f,
+            lightRadius * 0.25f,
+            highlightPaint
+        )
     }
 
     /**
      * 绘制方向箭头
      */
-    private fun drawDirectionArrow(canvas: Canvas, width: Float, height: Float) {
+    private fun drawDirectionArrow(canvas: Canvas) {
         canvas.save()
 
-        // 移动到红绿灯中心
-        canvas.translate(lightCenterX, lightCenterY)
+        // 移动到箭头中心
+        canvas.translate(arrowCenterX, arrowCenterY)
 
         // 根据箭头大小缩放
-        val arrowScale = lightRadius * 0.5f
+        val arrowScale = lightRadius * 0.8f
         canvas.scale(arrowScale, arrowScale)
 
         // 根据方向选择箭头路径和画笔
         val (arrowPath, paint) = when (direction) {
-            TrafficLightManager.DIRECTION_STRAIGHT -> Pair(straightArrowPath,
-                if (status == TrafficLightManager.STATUS_RED) arrowLightPaint else arrowPaint)
-            TrafficLightManager.DIRECTION_LEFT -> Pair(leftArrowPath,
-                if (status == TrafficLightManager.STATUS_RED) arrowLightPaint else arrowPaint)
-            TrafficLightManager.DIRECTION_RIGHT -> Pair(rightArrowPath,
-                if (status == TrafficLightManager.STATUS_RED) arrowLightPaint else arrowPaint)
-            TrafficLightManager.DIRECTION_STRAIGHT_LEFT -> Pair(straightLeftArrowPath,
-                if (status == TrafficLightManager.STATUS_RED) arrowLightPaint else arrowPaint)
-            TrafficLightManager.DIRECTION_STRAIGHT_RIGHT -> Pair(straightRightArrowPath,
-                if (status == TrafficLightManager.STATUS_RED) arrowLightPaint else arrowPaint)
-            TrafficLightManager.DIRECTION_ALL -> Pair(allDirectionPath,
-                if (status == TrafficLightManager.STATUS_RED) arrowLightPaint else arrowPaint)
-            else -> Pair(straightArrowPath,
-                if (status == TrafficLightManager.STATUS_RED) arrowLightPaint else arrowPaint)
+            TrafficLightManager.DIRECTION_STRAIGHT -> Pair(
+                straightArrowPath,
+                if (status == TrafficLightManager.STATUS_RED) arrowPaint else arrowDarkPaint
+            )
+            TrafficLightManager.DIRECTION_LEFT -> Pair(
+                leftArrowPath,
+                if (status == TrafficLightManager.STATUS_RED) arrowPaint else arrowDarkPaint
+            )
+            TrafficLightManager.DIRECTION_RIGHT -> Pair(
+                rightArrowPath,
+                if (status == TrafficLightManager.STATUS_RED) arrowPaint else arrowDarkPaint
+            )
+            TrafficLightManager.DIRECTION_STRAIGHT_LEFT -> Pair(
+                straightLeftArrowPath,
+                if (status == TrafficLightManager.STATUS_RED) arrowPaint else arrowDarkPaint
+            )
+            TrafficLightManager.DIRECTION_STRAIGHT_RIGHT -> Pair(
+                straightRightArrowPath,
+                if (status == TrafficLightManager.STATUS_RED) arrowPaint else arrowDarkPaint
+            )
+            TrafficLightManager.DIRECTION_ALL -> Pair(
+                allDirectionPath,
+                if (status == TrafficLightManager.STATUS_RED) arrowPaint else arrowDarkPaint
+            )
+            else -> Pair(
+                straightArrowPath,
+                if (status == TrafficLightManager.STATUS_RED) arrowPaint else arrowDarkPaint
+            )
         }
 
         // 绘制箭头
@@ -481,7 +452,7 @@ class TrafficLightView @JvmOverloads constructor(
     /**
      * 绘制倒计时数字
      */
-    private fun drawCountdownText(canvas: Canvas, width: Float, height: Float) {
+    private fun drawCountdownText(canvas: Canvas) {
         // 根据状态选择文本颜色
         val paint = when (status) {
             TrafficLightManager.STATUS_GREEN -> textPaint.apply { color = COLOR_GREEN }
@@ -491,17 +462,21 @@ class TrafficLightView @JvmOverloads constructor(
             else -> textPaint.apply { color = COLOR_TEXT }
         }
 
+        paint.textSize = textSize
+
         // 绘制倒计时数字
         val countdownText = countdown.toString()
         canvas.drawText(countdownText, textCenterX, textCenterY, paint)
 
-        // 绘制"秒"字（小号）
-        val secondPaint = Paint(paint).apply {
-            textSize = textSize * 0.4f
+        // 可选：绘制"秒"字（小号）
+        if (width > (textCenterX + paint.measureText(countdownText) / 2 + textSize * 0.3f).toInt()) {
+            val secondPaint = Paint(paint).apply {
+                textSize = textSize * 0.4f
+            }
+            val secondTextX = textCenterX + paint.measureText(countdownText) / 2 + secondPaint.textSize * 0.3f
+            val secondTextY = textCenterY - (paint.textSize - secondPaint.textSize) * 0.3f
+            canvas.drawText("秒", secondTextX, secondTextY, secondPaint)
         }
-        val secondTextX = textCenterX + paint.measureText(countdownText) / 2 + secondPaint.textSize * 0.5f
-        val secondTextY = textCenterY - (paint.textSize - secondPaint.textSize) * 0.3f
-        canvas.drawText("秒", secondTextX, secondTextY, secondPaint)
     }
 
     /**
